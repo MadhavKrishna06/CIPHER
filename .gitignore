@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Secrets
+.env
+
+# Course documents (copyrighted, stay local) and vector DB
+data/raw/
+data/chroma/
+
+# Packet captures are submitted via Canvas, not GitHub
+security/captures/*.pcap
+security/captures/*.pcapng
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

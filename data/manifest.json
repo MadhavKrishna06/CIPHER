@@ -1,0 +1,20 @@
+{
+  "files": {
+    "Lecture 1_slides.pdf": {
+      "bytes": 790239,
+      "ingested_at": "2026-09-22T03:09:38+00:00",
+      "sha256": "be4fa2f6acc0de33a01cd376329f5983e84545037b5e3c3cfcb236f4d8679b15"
+    },
+    "Lecture 2_slides.pdf": {
+      "bytes": 845167,
+      "ingested_at": "2026-09-22T03:09:38+00:00",
+      "sha256": "e68e60cf43807aba8c36166484e96cc30f01a70493bf12c6419924c24670a335"
+    },
+    "network security syllabus_fall 2026.docx": {
+      "bytes": 33837,
+      "ingested_at": "2026-09-22T03:09:38+00:00",
+      "sha256": "93ea464837dd90dc3134c6654441a8c9a6fb2b3607021ce12e5c98bac1a8b5d9"
+    }
+  },
+  "updated_at": "2026-09-22T03:09:38+00:00"
+}

@@ -29,6 +29,8 @@ MANIFEST_PATH: Path = _path("MANIFEST_PATH", "data/manifest.json")
 CHUNK_WORDS: int = int(os.getenv("CHUNK_WORDS", "500"))
 CHUNK_OVERLAP_WORDS: int = int(os.getenv("CHUNK_OVERLAP_WORDS", "50"))
 
+WEAK_MATCH_DISTANCE: float = float(os.getenv("WEAK_MATCH_DISTANCE", "0.9"))
+
 WEB_SEARCH_ENABLED: bool = os.getenv("WEB_SEARCH_ENABLED", "true").lower() == "true"
 
 COLLECTION_NAME = "cs5342"

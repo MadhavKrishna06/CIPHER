@@ -23,6 +23,7 @@ import shutil
 import sys
 from pathlib import Path
 
+from chromadb.config import Settings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_ollama import OllamaEmbeddings
@@ -50,6 +51,10 @@ def get_vectorstore() -> Chroma:
         collection_name=COLLECTION_NAME,
         embedding_function=embeddings,
         persist_directory=str(CHROMA_DIR),
+        # Chroma enables anonymized telemetry by default, which posts usage
+        # events to a third-party analytics endpoint. That contradicts the
+        # local-only guarantee and would appear in the Round 2 packet capture.
+        client_settings=Settings(anonymized_telemetry=False, is_persistent=True),
     )
 
 

@@ -130,6 +130,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"no such directory: {RAW_DIR}", file=sys.stderr)
         return 1
 
+
     if args.reset and not args.verify:
         shutil.rmtree(CHROMA_DIR, ignore_errors=True)
         manifest = {"files": {}}

@@ -9,6 +9,7 @@ import time
 
 from cipher.qa_agent import ask
 
+# Parse the question and optional command-line arguments.
 ap = argparse.ArgumentParser()
 ap.add_argument("question", nargs="+")
 ap.add_argument("--no-web", action="store_true", help="skip internet lookup even if enabled in .env")
@@ -16,17 +17,22 @@ ap.add_argument("-k", type=int, default=5, help="chunks to retrieve")
 args = ap.parse_args()
 
 q = " ".join(args.question)
+# Run the Q&A agent and measure its execution time.
 t0 = time.perf_counter()
 a = ask(q, k=args.k, web=False if args.no_web else None)
 dt = time.perf_counter() - t0
 
+# Display the question and the generated answer.
 print(f"\nQ: {q}\n")
 print(a.answer)
+# Stop if the request was blocked by a guard pattern.
 if a.blocked_by:
     print(f"\n--- BLOCKED by guard pattern: {a.blocked_by}  {dt:.2f}s")
     raise SystemExit(0)
+# Display answer quality indicators and execution time.
 dist = f"{a.best_distance:.3f}" if a.best_distance is not None else "n/a"
 print(f"\n--- grounded={a.grounded}  partial={a.partial}  weak_match={a.weak_match}  best_distance={dist}  {dt:.1f}s")
+# Print citations from retrieved documents and web references, if available.
 if a.sources:
     print("Sources:")
     for c in a.sources:

@@ -1,0 +1,65 @@
+{
+  "files": {
+    "Lecture 10_slides.pdf": {
+      "bytes": 541150,
+      "ingested_at": "2026-09-22T03:56:25+00:00",
+      "sha256": "d93867d113c0e5f82dc734be0a7440def25f6b9d27d4445cc16d4f78ede4d865"
+    },
+    "Lecture 11_slides.pdf": {
+      "bytes": 857785,
+      "ingested_at": "2026-09-22T03:56:25+00:00",
+      "sha256": "193d3bad9d986c57deac4f9fdc424ea8685284669477abe81c605e68b9a960f1"
+    },
+    "Lecture 1_slides.pdf": {
+      "bytes": 790239,
+      "ingested_at": "2026-09-22T03:09:38+00:00",
+      "sha256": "be4fa2f6acc0de33a01cd376329f5983e84545037b5e3c3cfcb236f4d8679b15"
+    },
+    "Lecture 2_slides.pdf": {
+      "bytes": 845167,
+      "ingested_at": "2026-09-22T03:09:38+00:00",
+      "sha256": "e68e60cf43807aba8c36166484e96cc30f01a70493bf12c6419924c24670a335"
+    },
+    "Lecture 3_slides.pdf": {
+      "bytes": 678125,
+      "ingested_at": "2026-09-22T03:56:25+00:00",
+      "sha256": "5037fc52d256fcec4291a35b21ccccf037f69962f74e63ad777603e3dc2b4cce"
+    },
+    "Lecture 4_slides.pdf": {
+      "bytes": 865654,
+      "ingested_at": "2026-09-22T03:56:25+00:00",
+      "sha256": "34c4deaa03af622f26d2c29d1740c476787f9a5b59c41a16b808adf0b3c51a52"
+    },
+    "Lecture 5_slides.pdf": {
+      "bytes": 604558,
+      "ingested_at": "2026-09-22T03:56:25+00:00",
+      "sha256": "bcfc746ebc30606c6466913979e5a43635954351a8bfb088a3e06c93d43a088e"
+    },
+    "Lecture 6_slides.pdf": {
+      "bytes": 645424,
+      "ingested_at": "2026-09-22T03:56:25+00:00",
+      "sha256": "deebf127dbc7dac071fa3c9a92ed54bdf0a2a05adbe2998f02062a5a035408a9"
+    },
+    "Lecture 7_slides.pdf": {
+      "bytes": 600729,
+      "ingested_at": "2026-09-22T03:56:25+00:00",
+      "sha256": "61ad9d802105af0df3dee60773ac06efbf2b26a51f1fb6e92e759b8c098bed7d"
+    },
+    "Lecture 8_slides .pdf": {
+      "bytes": 636161,
+      "ingested_at": "2026-09-22T03:56:25+00:00",
+      "sha256": "0f0b5572b2cba5b4d121a1552e32cae510146d7f9d41bae24f8862b300d22574"
+    },
+    "Lecture 9_slides.pdf": {
+      "bytes": 490786,
+      "ingested_at": "2026-09-22T03:56:25+00:00",
+      "sha256": "584620c0818a0f7466cd057d1d4f070369955b13d537518136811388baf74f01"
+    },
+    "network security syllabus_fall 2026.docx": {
+      "bytes": 33837,
+      "ingested_at": "2026-09-22T03:09:38+00:00",
+      "sha256": "93ea464837dd90dc3134c6654441a8c9a6fb2b3607021ce12e5c98bac1a8b5d9"
+    }
+  },
+  "updated_at": "2026-09-22T03:56:25+00:00"
+}

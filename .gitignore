@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Secrets
+.env
+
+# Course documents (copyrighted, stay local) and vector DB
+data/raw/
+data/chroma/
+
+# Round reports are kept outside the repository and submitted via Canvas
+docs/*.docx
+docs/*.pptx
+docs/round*_report.md
+
+# Packet captures are submitted via Canvas, not GitHub
+security/captures/*.pcap
+security/captures/*.pcapng
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

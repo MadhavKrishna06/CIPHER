@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+streamlit
+langchain
+langchain-community
+langchain-ollama
+langchain-chroma
+langchain-text-splitters
+chromadb
+pypdf
+python-pptx
+python-docx
+ddgs
+python-dotenv
+python-jose[cryptography]
+passlib[bcrypt]

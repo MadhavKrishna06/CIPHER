@@ -1,4 +1,4 @@
-# CIPHER
+# CIPHER 
 
 **C**ourse **I**ntelligence for **P**rivacy-preserving **H**ands-on **E**ducation and **R**eview
 

@@ -1,5 +1,10 @@
 {
   "files": {
+    "Computer Networking A Top-Down Approach.pdf": {
+      "bytes": 21508170,
+      "ingested_at": "2026-10-09T00:37:37+00:00",
+      "sha256": "ff1b2b5ff8c49279feffde8bfd98c95b94ab7d191573e92849f99123970f561a"
+    },
     "Lecture 10_slides.pdf": {
       "bytes": 541150,
       "ingested_at": "2026-09-22T03:56:25+00:00",
@@ -55,11 +60,11 @@
       "ingested_at": "2026-09-22T03:56:25+00:00",
       "sha256": "584620c0818a0f7466cd057d1d4f070369955b13d537518136811388baf74f01"
     },
-    "network security syllabus_fall 2026.docx": {
-      "bytes": 33837,
-      "ingested_at": "2026-09-22T03:09:38+00:00",
-      "sha256": "93ea464837dd90dc3134c6654441a8c9a6fb2b3607021ce12e5c98bac1a8b5d9"
+    "Network security essentials  applications and standards (Stallings, William, author).pdf": {
+      "bytes": 29010784,
+      "ingested_at": "2026-10-09T00:37:37+00:00",
+      "sha256": "767554b8bf069baf4c454d0628818ff96ce0e77a86cd782aa2a808e973b7c6b6"
     }
   },
-  "updated_at": "2026-09-22T03:56:25+00:00"
+  "updated_at": "2026-10-09T00:37:37+00:00"
 }

@@ -19,8 +19,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sys
+import time
 from pathlib import Path
 
 from chromadb.config import Settings
@@ -43,6 +45,9 @@ from .loaders import load_document
 
 # Rough English average: 1 word ~ 6 characters including the space.
 _CHARS_PER_WORD = 6
+
+# Texts per embedding request. Keeps a 1500-chunk textbook off a single call.
+EMBED_BATCH = int(os.getenv("EMBED_BATCH", "64"))
 
 
 def get_vectorstore() -> Chroma:
@@ -89,18 +94,42 @@ def delete_file_chunks(store: Chroma, rel_path: str) -> None:
         store.delete(ids=existing["ids"])
 
 
-def ingest(paths: list[Path], store: Chroma, raw_dir: Path = RAW_DIR) -> int:
+def ingest(paths: list[Path], store: Chroma, raw_dir: Path = RAW_DIR,
+           manifest: dict | None = None) -> int:
+    """Embed and store each file, one batch at a time.
+
+    Embedding is batched so that a textbook does not become a single multi-thousand
+    text request: progress is visible, memory stays bounded, and a failure costs one
+    batch rather than the whole file. When a manifest is given it is saved after each
+    completed file, so an interrupted run keeps the files that already finished.
+    """
     total = 0
     for path in paths:
         rel = path.relative_to(raw_dir).as_posix()
         delete_file_chunks(store, rel)  # idempotent re-ingest
+
+        print(f"  read  {rel} ...", flush=True)
         docs = chunk_file(path, raw_dir)
         if not docs:
-            print(f"  skip  {rel}: no extractable text")
+            print(f"  skip  {rel}: no extractable text", flush=True)
             continue
-        store.add_documents(docs, ids=[d.id for d in docs])
+
+        t0 = time.perf_counter()
+        for i in range(0, len(docs), EMBED_BATCH):
+            part = docs[i:i + EMBED_BATCH]
+            store.add_documents(part, ids=[d.id for d in part])
+            done = min(i + EMBED_BATCH, len(docs))
+            rate = done / max(time.perf_counter() - t0, 1e-6)
+            eta = (len(docs) - done) / rate
+            print(f"        {done}/{len(docs)} chunks  ({rate:.0f}/s, ~{eta:.0f}s left)",
+                  flush=True)
+
         total += len(docs)
-        print(f"  ok    {rel}: {len(docs)} chunks")
+        print(f"  ok    {rel}: {len(docs)} chunks in {time.perf_counter() - t0:.0f}s",
+              flush=True)
+
+        if manifest is not None:
+            integrity.save_manifest(integrity.record([path], raw_dir, manifest))
     return total
 
 
@@ -157,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Embedding with {EMBED_MODEL} via {OLLAMA_HOST} ...")
     store = get_vectorstore()
-    n = ingest(to_ingest, store, RAW_DIR)
+    n = ingest(to_ingest, store, RAW_DIR, manifest)
 
     manifest = integrity.record(to_ingest, RAW_DIR, manifest)
     for name in report.missing:

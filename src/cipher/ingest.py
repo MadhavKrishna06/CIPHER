@@ -41,7 +41,7 @@ from .config import (
     OLLAMA_HOST,
     RAW_DIR,
 )
-from .loaders import load_document
+from .loaders import doc_kind, load_document
 
 # Rough English average: 1 word ~ 6 characters including the space.
 _CHARS_PER_WORD = 6
@@ -70,6 +70,7 @@ def chunk_file(path: Path, raw_dir: Path) -> list[Document]:
         separators=["\n\n", "\n", ". ", " ", ""],
     )
     rel = path.relative_to(raw_dir).as_posix()
+    kind = doc_kind(rel, path.name)
     docs: list[Document] = []
     for page in load_document(path):
         for j, text in enumerate(splitter.split_text(page.text)):
@@ -80,6 +81,7 @@ def chunk_file(path: Path, raw_dir: Path) -> list[Document]:
                         "source": page.source,
                         "rel_path": rel,
                         "page": page.page,
+                        "kind": kind,   # "slide" or "page", used in citations
                         "chunk": j,
                     },
                     id=f"{rel}::p{page.page}::c{j}",

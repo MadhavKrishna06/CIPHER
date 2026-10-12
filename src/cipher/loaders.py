@@ -16,6 +16,30 @@ class Page:
     page: int     # 1-based page or slide number
 
 
+# Sub-folders of data/raw that say what a document is. A citation must read
+# "slide 9" for a lecture deck and "page 447" for a textbook, and a PDF extension
+# alone cannot tell them apart.
+_SLIDE_DIRS = {"slides", "lectures", "decks"}
+_PAGE_DIRS = {"textbooks", "books", "papers", "rfcs"}
+
+
+def doc_kind(rel_path: str, name: str) -> str:
+    """Return "slide" or "page" for citations.
+
+    The sub-folder under data/raw decides when there is one. Flat layouts fall back
+    to the file name, so an existing knowledge base keeps citing correctly.
+    """
+    top = rel_path.split("/", 1)[0].lower() if "/" in rel_path else ""
+    if top in _SLIDE_DIRS:
+        return "slide"
+    if top in _PAGE_DIRS:
+        return "page"
+    low = name.lower()
+    if low.endswith(".pptx") or "slide" in low or "lecture" in low:
+        return "slide"
+    return "page"
+
+
 def _clean(text: str) -> str:
     return " ".join(text.split())
 

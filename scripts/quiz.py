@@ -19,12 +19,15 @@ ap.add_argument("--topic", help="topic to quiz on; omitted means random passages
 ap.add_argument("--count", type=int, default=3, help="number of questions")
 ap.add_argument("--types", nargs="+", default=list(QTYPES), choices=list(QTYPES))
 ap.add_argument("--show", action="store_true", help="print answer keys instead of asking")
+ap.add_argument("--no-verify", action="store_true",
+                help="skip the generate-then-verify self-check (faster, lower quality)")
 args = ap.parse_args()
 
 mode = "topic" if args.topic else "random"
 
 t0 = time.perf_counter()
-questions = generate(mode=mode, topic=args.topic, count=args.count, types=tuple(args.types))
+questions = generate(mode=mode, topic=args.topic, count=args.count,
+                     types=tuple(args.types), verify=not args.no_verify)
 print(f"\nGenerated {len(questions)} question(s) in {time.perf_counter() - t0:.1f}s "
       f"(mode={mode}{', topic=' + args.topic if args.topic else ''})")
 

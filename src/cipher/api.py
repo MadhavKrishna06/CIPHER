@@ -76,6 +76,7 @@ class GradeRequest(BaseModel):
     quiz_id: str
     index: int = Field(ge=0)
     answer: str = Field(default="", max_length=4000)
+    web: bool | None = None          # None means fall back to the .env setting
 
 
 # --- endpoints ---------------------------------------------------------------
@@ -193,7 +194,7 @@ def quiz_grade(req: GradeRequest) -> dict:
 
     question = questions[req.index]
     try:
-        result = grade(question, req.answer)
+        result = grade(question, req.answer, web=req.web)
     except Exception as exc:
         raise HTTPException(status_code=503, detail=f"{type(exc).__name__}: {exc}") from exc
 
@@ -206,4 +207,6 @@ def quiz_grade(req: GradeRequest) -> dict:
         "similarity": result.similarity,
         "judge_verdict": result.judge_verdict,
         "passage": question.passage,
+        "web_sources": [{"title": w.title, "url": w.url, "snippet": w.snippet}
+                        for w in result.web_sources],
     }

@@ -210,6 +210,7 @@ with quiz_tab:
                             "quiz_id": quiz["quiz_id"],
                             "index": i,
                             "answer": answer,
+                            "web": web,
                         })
                     except Exception as exc:
                         st.error(str(exc))
@@ -226,6 +227,10 @@ with quiz_tab:
                                f"{r['similarity']:.3f} · judge verdict: {r['judge_verdict']}")
                 st.caption(f"Reference answer: {r['reference']}")
                 st.caption(f"Source: {r['citation']}")
+                if r.get("web_sources"):
+                    st.caption("Further reading:")
+                    for w in r["web_sources"]:
+                        st.caption(f"[{w['title']}]({w['url']})")
                 if show_trace:
                     with st.expander("Passage this question came from"):
                         st.write(r["passage"])

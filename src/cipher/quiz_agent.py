@@ -26,15 +26,17 @@ from __future__ import annotations
 import json
 import random
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from .config import WEB_SEARCH_ENABLED
 from .guard import classify
 from .llm import get_llm
 from .retriever import Chunk, cite, retrieve, sample
 from .similarity import text_similarity
 from .textfilter import is_prose
+from .web_search import WebResult, search
 
 QTYPES = ("mcq", "tf", "open")
 
@@ -241,6 +243,7 @@ class Graded:
     similarity: float | None = None   # embedding cosine, open questions only
     judge_verdict: str | None = None  # the judge's own label, open questions only
     student: str = ""
+    web_sources: list[WebResult] = field(default_factory=list)
 
 
 def pick_chunks(mode: str, topic: str | None, limit: int) -> list[Chunk]:
@@ -514,10 +517,29 @@ def _grade_open(question: Question, student: str) -> Graded:
     )
 
 
-def grade(question: Question, student: str) -> Graded:
+def _add_web_sources(result: Graded, question: Question, web: bool | None) -> Graded:
+    """Attach internet references to feedback on a wrong answer.
+
+    The assignment requires feedback to carry citations including citations from the
+    internet. Only the question text is sent to the search engine: never the passage,
+    never the reference answer, never what the student wrote. Otherwise course content
+    and a student's own work would leave the machine, which contradicts the whole
+    premise and would be visible in the internet-assisted packet capture.
+
+    Only on a wrong answer, because further reading is what a wrong answer needs.
+    """
+    if result.correct:
+        return result
+    use_web = WEB_SEARCH_ENABLED if web is None else web
+    if use_web:
+        result.web_sources = search(question.prompt)
+    return result
+
+
+def grade(question: Question, student: str, web: bool | None = None) -> Graded:
     """Grade one answer. MCQ and true/false are deterministic; open answers are judged."""
     if question.qtype == "open":
-        return _grade_open(question, student)
+        return _add_web_sources(_grade_open(question, student), question, web)
 
     if question.qtype == "mcq":
         picked = _norm_mcq(student, question.options or {})
@@ -533,14 +555,14 @@ def grade(question: Question, student: str) -> Graded:
             lead = "Answer with one of the letters A, B, C or D."
         else:
             lead = "Answer with true or false."
-        return Graded(
+        return _add_web_sources(Graded(
             correct=False,
             score=0.0,
             feedback=f"{lead} The correct answer is {shown}. {question.explanation}".strip(),
             reference=shown,
             citation=question.citation,
             student=student,
-        )
+        ), question, web)
 
     correct = picked == question.answer
     if correct:
@@ -548,11 +570,11 @@ def grade(question: Question, student: str) -> Graded:
     else:
         feedback = f"Incorrect. The correct answer is {shown}. {question.explanation}".strip()
 
-    return Graded(
+    return _add_web_sources(Graded(
         correct=correct,
         score=1.0 if correct else 0.0,
         feedback=feedback,
         reference=shown,
         citation=question.citation,
         student=student,
-    )
+    ), question, web)

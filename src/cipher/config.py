@@ -26,8 +26,12 @@ RAW_DIR: Path = _path("RAW_DIR", "data/raw")
 CHROMA_DIR: Path = _path("CHROMA_DIR", "data/chroma")
 MANIFEST_PATH: Path = _path("MANIFEST_PATH", "data/manifest.json")
 
-CHUNK_WORDS: int = int(os.getenv("CHUNK_WORDS", "500"))
-CHUNK_OVERLAP_WORDS: int = int(os.getenv("CHUNK_OVERLAP_WORDS", "50"))
+# 500 words covered several topics per chunk, so the embedding averaged them and the
+# chunk sat close to nothing in particular. Asking "what is a replay attack" returned
+# an index page and an unrelated paragraph on ESP padding ahead of the real
+# explanation. 220 words is roughly one idea, which is what a query matches against.
+CHUNK_WORDS: int = int(os.getenv("CHUNK_WORDS", "220"))
+CHUNK_OVERLAP_WORDS: int = int(os.getenv("CHUNK_OVERLAP_WORDS", "40"))
 
 WEAK_MATCH_DISTANCE: float = float(os.getenv("WEAK_MATCH_DISTANCE", "0.9"))
 

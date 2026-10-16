@@ -37,7 +37,11 @@ Rules:
    in any wording, reply with exactly: {OFF_TOPIC}
 8. You have no memory of earlier questions. If asked about a previous question or answer,
    say you do not have access to it.
-Keep answers concise and in plain English."""
+
+Write a complete answer, not a one-line definition. When the passages allow it, cover
+what the thing is, how it works, and any defence or countermeasure they mention, in
+three to six sentences. Draw on every passage that is relevant, not only the first.
+Use plain English and define a term the first time you use it."""
 
 _CITE_RE = re.compile(r"\[(\d+)\]")
 
@@ -54,6 +58,11 @@ class Answer:
     sources: list[Chunk] = field(default_factory=list)      # chunks actually cited
     web_sources: list[WebResult] = field(default_factory=list)
     raw: str = ""                     # model output before citation rewrite
+    # Retrieval trace. The assignment asks for a mapping between the user's prompt
+    # (step 1 of its workflow) and the data sent to the local model (step 4), so the
+    # chunks that were retrieved but never cited have to survive too.
+    retrieved: list[Chunk] = field(default_factory=list)
+    context: str = ""                 # the numbered passage block given to the model
 
 
 def build_context(chunks: list[Chunk]) -> str:
@@ -82,15 +91,17 @@ def ask(question: str, k: int = 5, web: bool | None = None) -> Answer:
         return Answer(question=question, answer=verdict.reply, grounded=False, blocked_by=verdict.pattern)
 
     chunks = retrieve(question, k=k)
+    context = build_context(chunks)
     llm = get_llm(temperature=0.1)
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=f"<context>\n{build_context(chunks)}\n</context>\n\nQuestion: {question}"),
+        HumanMessage(content=f"<context>\n{context}\n</context>\n\nQuestion: {question}"),
     ]
     raw = llm.invoke(messages).content.strip()
 
     if OFF_TOPIC in raw:
-        return Answer(question=question, answer=OFF_TOPIC_REPLY, grounded=False, raw=raw)
+        return Answer(question=question, answer=OFF_TOPIC_REPLY, grounded=False, raw=raw,
+                      retrieved=chunks, context=context)
 
     best = chunks[0].score if chunks else None
     weak = best is None or best > WEAK_MATCH_DISTANCE
@@ -115,4 +126,6 @@ def ask(question: str, k: int = 5, web: bool | None = None) -> Answer:
         sources=cited,
         web_sources=web_sources,
         raw=raw,
+        retrieved=chunks,
+        context=context,
     )

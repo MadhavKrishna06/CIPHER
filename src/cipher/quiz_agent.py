@@ -34,6 +34,7 @@ from .guard import classify
 from .llm import get_llm
 from .retriever import Chunk, cite, retrieve, sample
 from .similarity import text_similarity
+from .textfilter import is_prose
 
 QTYPES = ("mcq", "tf", "open")
 
@@ -46,20 +47,15 @@ JUDGE_TEMPERATURE = 0.0
 OPEN_PASS_SCORE = 0.6
 
 # --- passage filtering -------------------------------------------------------
-# A textbook holds pages that contain real sentences but no teachable content:
-# tables of contents, indexes, bibliographies and "recommended reading" lists.
-# They survive a plain word-count filter because author names are words, so they
-# are detected by shape instead. Until the corpus is re-ingested with front and
-# back matter excluded, this is what keeps them out of quizzes.
+# Shared with ingest, see textfilter. Pages that are contents, index or bibliography
+# are skipped at ingest now, so this is a second line of defence for a knowledge base
+# built before that change.
 
-# Slides are terser than textbook prose by design, so one threshold for both either
-# lets contents pages through or throws away the best lecture material.
-MIN_CHUNK_CHARS = {"page": 250, "slide": 100}
-MIN_WORD_RATIO = {"page": 0.55, "slide": 0.45}
-MAX_NUMERIC_RATIO = 0.12   # contents and index pages are mostly page numbers
-MAX_REF_TAGS = 2           # [KOHL89]-style citation keys
-MAX_INITIALS = 3           # "Kumar, M. " author initials
-MAX_YEARS = 3              # publication years
+
+def is_usable(chunk: Chunk) -> bool:
+    """True when a chunk holds prose worth asking a question about."""
+    return is_prose(chunk.text, chunk.effective_kind)
+
 
 # A negative multiple-choice stem needs the passage to contain at least one item that
 # is NOT an instance of the thing asked about. Course passages are usually lists of
@@ -83,60 +79,6 @@ _SOURCE_WORD = re.compile(
     r"\b(passage|excerpt|according to (?:the|this)|in the (?:text|document))\b",
     re.IGNORECASE,
 )
-
-_PROSE_WORD = re.compile(r"^[A-Za-z][A-Za-z'-]{2,}$")
-_REF_TAG = re.compile(r"\[[A-Z]{2,5}\d{2}[a-z]?\]")
-_INITIALS = re.compile(r"\b[A-Z]\.\s")
-_YEAR = re.compile(r"\b(?:19|20)\d{2}\b")
-_LEADER = re.compile(r"(?:\.\s*){4,}")          # dotted leaders, a contents page
-_SECTION_HEAD = re.compile(
-    r"^\s*(references|bibliography|index|contents|glossary|preface|"
-    r"acknowledge?ments|recommended reading|further reading|about the author)\b",
-    re.IGNORECASE,
-)
-_FRONT_MATTER = re.compile(
-    r"(table of contents|contents at a glance|list of (figures|tables)|"
-    r"recommended reading and web sites|key terms, review questions|isbn)",
-    re.IGNORECASE,
-)
-
-
-def is_usable(chunk: Chunk) -> bool:
-    """True when a chunk holds prose worth asking a question about."""
-    text = chunk.text.strip()
-    kind = chunk.kind or ("slide" if "lecture" in chunk.source.lower() else "page")
-    if len(text) < MIN_CHUNK_CHARS.get(kind, 250):
-        return False
-
-    tokens = text.split()
-    if not tokens:
-        return False
-
-    # Bullet glyphs survive PDF extraction as their own tokens and would otherwise
-    # count against the prose ratio on every slide.
-    stripped = [t.strip(".,;:()[]•�-") for t in tokens]
-    prose = sum(1 for t in stripped if _PROSE_WORD.match(t))
-    if prose / len(tokens) < MIN_WORD_RATIO.get(kind, 0.55):
-        return False
-
-    numeric = sum(1 for t in stripped if t.isdigit())
-    if numeric / len(tokens) > MAX_NUMERIC_RATIO:
-        return False
-
-    if _LEADER.search(text):
-        return False
-    if _SECTION_HEAD.match(text) or _FRONT_MATTER.search(text[:600]):
-        return False
-    if len(_REF_TAG.findall(text)) > MAX_REF_TAGS:
-        return False
-
-    initials = len(_INITIALS.findall(text))
-    if initials > MAX_INITIALS:
-        return False
-    if len(_YEAR.findall(text)) > MAX_YEARS and initials >= 2:
-        return False
-
-    return True
 
 
 # --- prompts -----------------------------------------------------------------

@@ -31,6 +31,9 @@ ddgs==9.16.0
 
 python-dotenv==1.2.3
 
+# Used directly by src/cipher/api.py and ui/app.py, not only transitively.
+httpx==0.28.1
+
 # Bonus work only: access control and session management on the UI.
 python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4

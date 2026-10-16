@@ -148,6 +148,7 @@ def ask_endpoint(req: AskRequest) -> dict:
             "retrieved": [_chunk_dict(c) for c in a.retrieved],
             "context": a.context,
             "raw": a.raw,
+            "citations_repaired": a.citations_repaired,
         },
     }
 

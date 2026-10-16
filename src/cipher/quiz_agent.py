@@ -69,6 +69,21 @@ MAX_YEARS = 3              # publication years
 # Rejecting the stem in code is the only layer that holds, exactly as with guard.py.
 _NEGATIVE_STEM = re.compile(r"\b(not|except|never|neither|incorrect|false|untrue)\b", re.IGNORECASE)
 
+# The generator prompt forbids referring to the source, and the 3B model still writes
+# "The passage mentions that ...". Explanations are shown to the student as feedback,
+# so the mention is stripped in code and the question is dropped if one survives.
+# Third rule in this file that a prompt could not enforce on its own.
+_SOURCE_LEAD = re.compile(
+    r"^\s*(?:the|this|that)?\s*(?:passage|text|document|excerpt|context|material)\s+"
+    r"(?:states?|mentions?|says?|indicates?|explains?|notes?|describes?|shows?|implies)\s+"
+    r"(?:that\s+)?",
+    re.IGNORECASE,
+)
+_SOURCE_WORD = re.compile(
+    r"\b(passage|excerpt|according to (?:the|this)|in the (?:text|document))\b",
+    re.IGNORECASE,
+)
+
 _PROSE_WORD = re.compile(r"^[A-Za-z][A-Za-z'-]{2,}$")
 _REF_TAG = re.compile(r"\[[A-Z]{2,5}\d{2}[a-z]?\]")
 _INITIALS = re.compile(r"\b[A-Z]\.\s")
@@ -316,13 +331,28 @@ def _parse(raw: str) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+def _clean_explanation(text: str) -> str | None:
+    """Strip a leading source-attribution clause. None means the question is unusable.
+
+    "The passage states that X" becomes "X". A mention that is not a leading clause
+    cannot be rewritten safely, so the question is dropped instead and the candidate
+    reserve supplies a replacement.
+    """
+    out = _SOURCE_LEAD.sub("", text).strip()
+    if _SOURCE_WORD.search(out):
+        return None
+    return out[:1].upper() + out[1:] if out else ""
+
+
 def _build(qtype: str, data: dict, chunk: Chunk) -> Question | None:
     """Validate one model response and turn it into a Question, or reject it.
 
     The schema already constrains the shape. This stays as a second check, because
     a schema cannot require that the answer letter is one of the options offered.
     """
-    explanation = str(data.get("explanation", "")).strip()
+    explanation = _clean_explanation(str(data.get("explanation", "")))
+    if explanation is None:
+        return None
 
     if qtype == "mcq":
         options = data.get("options")
@@ -358,35 +388,67 @@ def _build(qtype: str, data: dict, chunk: Chunk) -> Question | None:
                     chunk.text, None, chunk.kind)
 
 
-def _verify(question: Question) -> bool:
-    """Re-answer a keyed question from its own passage and require agreement.
-
-    Only MCQ and true/false can be checked this way; an open question has no single
-    token to compare. The verifier never sees the key or the explanation.
-    """
-    if question.qtype == "mcq":
-        schema = _MCQ_ANSWER_SCHEMA
-        options = "\n".join(f"{k}. {v}" for k, v in sorted((question.options or {}).items()))
-        task = f"Question: {question.prompt}\n{options}"
-    elif question.qtype == "tf":
-        schema = _TF_ANSWER_SCHEMA
-        task = f"Is this statement true or false?\nStatement: {question.prompt}"
-    else:
-        return True
-
+def _answer_from_passage(passage: str, task: str, schema: dict):
+    """Ask the model to answer a question from one passage. Returns the answer value."""
     llm = get_llm(temperature=0.0, schema=schema)
     raw = llm.invoke([
         SystemMessage(content=_VERIFY_PROMPT),
-        HumanMessage(content=f"<passage>\n{question.passage}\n</passage>\n\n{task}"),
+        HumanMessage(content=f"<passage>\n{passage}\n</passage>\n\n{task}"),
     ]).content.strip()
-
     data = _parse(raw)
-    if not data:
-        return False
-    answer = data.get("answer")
+    return data.get("answer") if data else None
+
+
+def _mcq_task(prompt: str, labelled: list[tuple[str, str]]) -> str:
+    body = "\n".join(f"{label}. {text}" for label, text in labelled)
+    return f"Question: {prompt}\n{body}"
+
+
+def _verify(question: Question) -> bool:
+    """Re-answer a keyed question from its own passage and require agreement.
+
+    Open questions have no single token to compare, so they are not checked here.
+    The verifier never sees the key or the explanation.
+
+    For multiple choice the check runs twice, the second time with the options in a
+    different order under different labels. A language model's choice depends partly
+    on where an option sits, not only on what it says, so a question with several
+    defensible answers tends to produce a different pick once the order changes.
+    Requiring the same option text both times rejects those. Repeating the same order
+    would not: the generator and the verifier are the same model and share its bias.
+    """
     if question.qtype == "tf":
+        answer = _answer_from_passage(
+            question.passage,
+            f"Is this statement true or false?\nStatement: {question.prompt}",
+            _TF_ANSWER_SCHEMA,
+        )
         return isinstance(answer, bool) and ("true" if answer else "false") == question.answer
-    return str(answer).strip().upper()[:1] == question.answer
+
+    if question.qtype != "mcq":
+        return True
+
+    options = question.options or {}
+    key_text = options.get(question.answer, "").strip().lower()
+
+    first = _answer_from_passage(
+        question.passage,
+        _mcq_task(question.prompt, sorted(options.items())),
+        _MCQ_ANSWER_SCHEMA,
+    )
+    if str(first).strip().upper()[:1] != question.answer:
+        return False
+
+    shuffled = list(options.values())
+    random.shuffle(shuffled)
+    relabelled = list(zip("ABCD", shuffled))
+    second = _answer_from_passage(
+        question.passage,
+        _mcq_task(question.prompt, relabelled),
+        _MCQ_ANSWER_SCHEMA,
+    )
+    picked = dict(relabelled).get(str(second).strip().upper()[:1], "")
+    return picked.strip().lower() == key_text
 
 
 def generate(mode: str = "random", topic: str | None = None, count: int = 5,
@@ -406,7 +468,9 @@ def generate(mode: str = "random", topic: str | None = None, count: int = 5,
     if bad:
         raise ValueError(f"unknown question types: {bad}")
 
-    candidates = pick_chunks(mode, topic, count * 3)
+    # Shuffle-verify rejects more questions than plain verification, so the reserve
+    # of candidate chunks has to be deeper than the number of questions asked for.
+    candidates = pick_chunks(mode, topic, count * 4)
     questions: list[Question] = []
     seen_pages: set[tuple[str, int]] = set()
 
@@ -455,11 +519,20 @@ _FALSE = {"false", "f", "no", "n", "0", "incorrect"}
 
 
 def _norm_tf(student: str) -> str | None:
+    """Accept a bare verdict, or a verdict that opens a sentence of reasoning."""
     s = student.strip().lower().rstrip(".!")
     if s in _TRUE:
         return "true"
     if s in _FALSE:
         return "false"
+    # "False, because UDP comes first" is an answer, not a parse failure.
+    lead = re.match(r"^\s*(\w+)\b[\s,:.-]", student.strip().lower())
+    if lead:
+        word = lead.group(1)
+        if word in _TRUE:
+            return "true"
+        if word in _FALSE:
+            return "false"
     return None
 
 
@@ -512,10 +585,16 @@ def grade(question: Question, student: str) -> Graded:
         shown = question.answer
 
     if picked is None:
+        if not student.strip():
+            lead = "No answer given."
+        elif question.qtype == "mcq":
+            lead = "Answer with one of the letters A, B, C or D."
+        else:
+            lead = "Answer with true or false."
         return Graded(
             correct=False,
             score=0.0,
-            feedback=f"Could not read that answer. The correct answer is {shown}. {question.explanation}".strip(),
+            feedback=f"{lead} The correct answer is {shown}. {question.explanation}".strip(),
             reference=shown,
             citation=question.citation,
             student=student,

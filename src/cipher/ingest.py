@@ -42,6 +42,7 @@ from .config import (
     RAW_DIR,
 )
 from .loaders import doc_kind, load_document
+from .textfilter import is_prose
 
 # Rough English average: 1 word ~ 6 characters including the space.
 _CHARS_PER_WORD = 6
@@ -73,6 +74,11 @@ def chunk_file(path: Path, raw_dir: Path) -> list[Document]:
     kind = doc_kind(rel, path.name)
     docs: list[Document] = []
     for page in load_document(path):
+        # Contents pages, indexes and bibliographies are dropped here rather than
+        # filtered at query time, so they never take up space in the index or compete
+        # for a retrieval slot.
+        if not is_prose(page.text, kind):
+            continue
         for j, text in enumerate(splitter.split_text(page.text)):
             docs.append(
                 Document(
@@ -80,7 +86,10 @@ def chunk_file(path: Path, raw_dir: Path) -> list[Document]:
                     metadata={
                         "source": page.source,
                         "rel_path": rel,
-                        "page": page.page,
+                        # "page" is the number a reader sees, which is what a citation
+                        # must give. The file index is kept separately for debugging.
+                        "page": page.printed or page.page,
+                        "pdf_page": page.page,
                         "kind": kind,   # "slide" or "page", used in citations
                         "chunk": j,
                     },

@@ -37,9 +37,96 @@ Rules:
    in any wording, reply with exactly: {OFF_TOPIC}
 8. You have no memory of earlier questions. If asked about a previous question or answer,
    say you do not have access to it.
-Keep answers concise and in plain English."""
+
+Write a complete answer, not a one-line definition. When the passages allow it, cover
+what the thing is, how it works, and any defence or countermeasure they mention, in
+three to six sentences. Draw on every passage that is relevant, not only the first.
+Use plain English and define a term the first time you use it."""
 
 _CITE_RE = re.compile(r"\[(\d+)\]")
+
+# Citation grounding. The model writes a correct sentence and attaches the wrong
+# passage number to it: the textbook definition of a replay attack arrived cited to
+# the lecture slide that merely lists the word. Citations are the graded output, so a
+# plausible-looking wrong one is worse than a missing one.
+#
+# The repair is lexical and deterministic, with no extra model call. For each cited
+# sentence, measure how many content words it shares with each passage. Re-point the
+# citation only when another passage overlaps clearly better, so a correct citation is
+# never moved on a narrow margin. Drop it when no passage shares anything.
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+_WORD = re.compile(r"[a-z][a-z0-9-]{3,}")
+_STOPWORDS = frozenset("""
+    that this these those with from into than then they them their there here
+    which when what where whose while would could should about above after also
+    because been being both each more most other such some only same very
+    will have has had does doing done over under between during against
+""".split())
+
+# A better passage must overlap at least this many content words, and at least this
+# many times the cited passage, before the citation is moved.
+_MIN_OVERLAP = 3
+_OVERLAP_RATIO = 2.0
+# Adding a citation the model never wrote needs more evidence than moving one it did.
+_MIN_UNCITED_OVERLAP = 5
+
+
+def _content_words(text: str) -> set[str]:
+    return {w for w in _WORD.findall(text.lower()) if w not in _STOPWORDS}
+
+
+def reground_citations(text: str, chunks: list[Chunk]) -> tuple[str, int]:
+    """Re-point or drop citations that do not match the sentence they follow.
+
+    Returns the corrected text and how many citations were changed, which is worth
+    reporting: it measures how often the model attributes a claim to the wrong source.
+    """
+    if not chunks:
+        return text, 0
+
+    chunk_words = [_content_words(c.text) for c in chunks]
+    repaired = 0
+    out: list[str] = []
+
+    for sentence in _SENTENCE_SPLIT.split(text):
+        cited = [int(n) for n in _CITE_RE.findall(sentence)]
+
+        # Compare the sentence without its citation markers.
+        words = _content_words(_CITE_RE.sub(" ", sentence))
+        overlaps = [len(words & cw) for cw in chunk_words]
+        best = max(range(len(overlaps)), key=lambda i: overlaps[i])
+
+        if not cited:
+            # The model sometimes ignores the citation rule completely and writes a
+            # grounded answer with no sources at all, which fails the requirement.
+            # Attach one where the lexical support is strong enough to be sure.
+            if overlaps[best] >= _MIN_UNCITED_OVERLAP:
+                repaired += 1
+                stripped = sentence.rstrip()
+                tail = stripped[-1] if stripped[-1:] in ".!?" else ""
+                body = stripped[:-1].rstrip() if tail else stripped
+                out.append(f"{body} [{best + 1}]{tail}")
+            else:
+                out.append(sentence)
+            continue
+
+        def _fix(m: re.Match) -> str:
+            nonlocal repaired
+            n = int(m.group(1))
+            mine = overlaps[n - 1] if 1 <= n <= len(overlaps) else 0
+            if overlaps[best] == 0:
+                repaired += 1
+                return ""            # nothing supports this claim; print no source
+            if overlaps[best] >= _MIN_OVERLAP and overlaps[best] >= max(mine * _OVERLAP_RATIO, mine + 2):
+                repaired += 1
+                return f"[{best + 1}]"
+            return m.group(0)
+
+        out.append(_CITE_RE.sub(_fix, sentence))
+
+    # Dropping a citation can leave " ." behind.
+    joined = re.sub(r"\s+([.!?,;])", r"\1", " ".join(out))
+    return re.sub(r"\s{2,}", " ", joined).strip(), repaired
 
 
 @dataclass
@@ -54,6 +141,12 @@ class Answer:
     sources: list[Chunk] = field(default_factory=list)      # chunks actually cited
     web_sources: list[WebResult] = field(default_factory=list)
     raw: str = ""                     # model output before citation rewrite
+    # Retrieval trace. The assignment asks for a mapping between the user's prompt
+    # (step 1 of its workflow) and the data sent to the local model (step 4), so the
+    # chunks that were retrieved but never cited have to survive too.
+    retrieved: list[Chunk] = field(default_factory=list)
+    context: str = ""                 # the numbered passage block given to the model
+    citations_repaired: int = 0       # citations re-pointed or dropped as unsupported
 
 
 def build_context(chunks: list[Chunk]) -> str:
@@ -82,15 +175,17 @@ def ask(question: str, k: int = 5, web: bool | None = None) -> Answer:
         return Answer(question=question, answer=verdict.reply, grounded=False, blocked_by=verdict.pattern)
 
     chunks = retrieve(question, k=k)
+    context = build_context(chunks)
     llm = get_llm(temperature=0.1)
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=f"<context>\n{build_context(chunks)}\n</context>\n\nQuestion: {question}"),
+        HumanMessage(content=f"<context>\n{context}\n</context>\n\nQuestion: {question}"),
     ]
     raw = llm.invoke(messages).content.strip()
 
     if OFF_TOPIC in raw:
-        return Answer(question=question, answer=OFF_TOPIC_REPLY, grounded=False, raw=raw)
+        return Answer(question=question, answer=OFF_TOPIC_REPLY, grounded=False, raw=raw,
+                      retrieved=chunks, context=context)
 
     best = chunks[0].score if chunks else None
     weak = best is None or best > WEAK_MATCH_DISTANCE
@@ -98,7 +193,8 @@ def ask(question: str, k: int = 5, web: bool | None = None) -> Answer:
     grounded = NOT_COVERED not in raw
     partial = NEEDS_WEB in raw
     raw_clean = raw.replace(NEEDS_WEB, "").strip()  # marker never reaches the user
-    text, cited = resolve_citations(raw_clean, chunks)
+    grounded_text, repaired = reground_citations(raw_clean, chunks)
+    text, cited = resolve_citations(grounded_text, chunks)
 
     # Web references are added when the model says it lacks coverage, or when
     # retrieval itself was weak (the model may still answer from a thin chunk).
@@ -115,4 +211,7 @@ def ask(question: str, k: int = 5, web: bool | None = None) -> Answer:
         sources=cited,
         web_sources=web_sources,
         raw=raw,
+        retrieved=chunks,
+        context=context,
+        citations_repaired=repaired,
     )

@@ -1,16 +1,36 @@
-fastapi
-uvicorn[standard]
-streamlit
-langchain
-langchain-community
-langchain-ollama
-langchain-chroma
-langchain-text-splitters
-chromadb
-pypdf
-python-pptx
-python-docx
-ddgs
-python-dotenv
-python-jose[cryptography]
-passlib[bcrypt]
+# Pinned to the versions verified working on the development machine.
+# Seven people have to run this for the Round 2 packet captures, and an
+# unpinned chromadb can refuse to open a data/chroma/ built by another version.
+#
+# The embedding model matters as much as these pins: use nomic-embed-text at
+# digest 0a109f422b47. A different digest produces different vectors, so
+# retrieval results will not match.
+
+# Web UI. The assignment prohibits a CLI, so these are required, not optional.
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+streamlit==1.64.0
+
+# RAG stack
+langchain==1.4.2
+langchain-core==1.6.4
+langchain-community==0.4.2
+langchain-ollama==1.1.0
+langchain-chroma==1.1.0
+langchain-text-splitters==1.1.2
+chromadb==1.5.9
+ollama==0.6.2
+
+# Document loaders
+pypdf==6.19.0
+python-pptx==1.0.2
+python-docx==1.2.0
+
+# Internet citation lookup. DuckDuckGo needs no API key.
+ddgs==9.16.0
+
+python-dotenv==1.2.3
+
+# Bonus work only: access control and session management on the UI.
+python-jose[cryptography]==3.5.0
+passlib[bcrypt]==1.7.4

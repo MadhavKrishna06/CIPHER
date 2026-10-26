@@ -173,3 +173,75 @@ Round 2 packet capture.
 | Knowledge base cannot be silently altered | `--verify` transcript showing `VERIFIED` and `CHANGED` states (`security/integrity_check.md`) |
 | Injection defenses behave as described | `security/adversarial_log.md`, extended with indirect injection via a planted document |
 | Telemetry is off | capture shows no connection to analytics endpoints |
+
+---
+
+## 6. Findings from traffic verification (Round 2)
+
+Three claims in the sections above did not hold when the running system was
+examined with Wireshark and the host connection table. All three are fixed; they
+are recorded here because the verification task exists to find exactly this kind
+of gap between a design document and a running program.
+
+### 6.1 The citation lookup contacted more than one service
+
+Section 4 states that the only outbound connection carries the user's question
+to DuckDuckGo. The `ddgs` library defaults to `backend="auto"`, which chooses at
+runtime from eighteen search engines. A single query for `kerberos replay
+attack` reached three hosts:
+
+```
+https://grokipedia.com/api/typeahead?query=kerberos+replay+attack&limit=1
+https://en.wikipedia.org/w/api.php?...&search=kerberos%20replay%20attack
+https://html.duckduckgo.com/html/
+```
+
+Two of them carried the question text in the URL query string, the part of a
+request most likely to be retained in a server access log.
+
+Impact: the documented set of third parties receiving course-related queries was
+wrong and unbounded, and the destination differed between runs, so no two packet
+captures would agree.
+
+Fix: `src/cipher/web_search.py` pins `backend="duckduckgo"`. Re-verified after
+the change, a lookup contacts `html.duckduckgo.com` and nothing else.
+
+### 6.2 The user interface listened on every network interface
+
+The backend is started with `--host 127.0.0.1`, so it is reachable only from the
+machine itself. The Streamlit front end was not restricted, and the host
+connection table showed:
+
+```
+::        8501   Listen   python3.11      <- all interfaces
+127.0.0.1 8000   Listen   python3.11      <- loopback only
+```
+
+Impact: any host on the same network could open the tutor, generate quizzes and
+read the retrieval trace panel, which displays retrieved course passages. The
+privacy argument in section 3 addressed outbound data only and did not consider
+inbound access to the interface itself.
+
+Fix: `.streamlit/config.toml` sets `server.address = "127.0.0.1"`, committed so
+the restriction does not depend on remembering a command-line flag.
+
+### 6.3 The user interface sent usage telemetry by default
+
+Streamlit collects usage statistics unless told otherwise, in the same way
+ChromaDB does. That outbound traffic would have appeared in the local-only
+capture and contradicted the claim that nothing leaves the machine during local
+inference.
+
+Fix: `.streamlit/config.toml` sets `browser.gatherUsageStats = false`. Together
+with `anonymized_telemetry=False` in `src/cipher/ingest.py`, no component of the
+system reports to a third party.
+
+### 6.4 Residual risk accepted
+
+Traffic between the backend and Ollama on `127.0.0.1:11434` is plain HTTP, so
+the prompt and the retrieved course passages are readable in a loopback capture.
+No network attacker can reach that interface, so this is not a network exposure.
+It does mean any process running as the same operating-system user can read the
+prompts. That is the same trust boundary as `data/chroma/` and `.env`, already
+described under data exposure in section 3, and it is accepted rather than
+mitigated for a single-user local deployment.

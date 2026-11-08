@@ -1,0 +1,14 @@
+# Bind the UI to loopback only.
+#
+# Streamlit's default listens on every interface. Traffic verification for Round 2
+# showed the socket as "::  8501  Listen", meaning any host on the same network
+# could open the tutor, take quizzes and read the retrieval trace, which carries
+# course material. The FastAPI backend was already restricted with
+# --host 127.0.0.1; this gives the front end the same restriction so the setting
+# cannot be forgotten on the command line.
+[server]
+address = "127.0.0.1"
+headless = true
+
+[browser]
+gatherUsageStats = false

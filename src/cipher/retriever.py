@@ -12,16 +12,35 @@ from .loaders import doc_kind
 from .textfilter import is_prose
 
 
-def cite(source: str, page: int, kind: str | None = None) -> str:
+def cite(source: str, page: int, kind: str | None = None,
+         pdf_page: int | None = None) -> str:
     """The one place a citation string is built, so every agent prints the same form.
 
     kind comes from chunk metadata when the knowledge base was built with it, and is
     derived from the file name otherwise. The extension is dropped because it appears
     in every citation and tells a reader nothing.
+
+    page is the number printed on the paper. pdf_page is the position of that sheet in
+    the file, counted from the cover. They differ in a textbook because the front matter
+    is unnumbered: printed page 117 of Stallings is the 135th sheet of the PDF. A reader
+    given only the printed number types it into a viewer and lands eighteen pages short,
+    so both are shown whenever they disagree. Slides have one number and keep one.
     """
     name = source[:-4] if source.lower().endswith((".pdf", ".txt", ".md")) else source
     name = name[:-5] if name.lower().endswith((".pptx", ".docx")) else name
-    return f"{name.strip()}, {kind or doc_kind('', source)} {page}"
+    resolved = kind or doc_kind("", source)
+    text = f"{name.strip()}, {resolved} {page}"
+    if resolved == "page" and pdf_page and pdf_page != page:
+        text += f" (PDF {pdf_page})"
+    return text
+
+
+def _as_int(value: object) -> int | None:
+    """Chroma hands metadata back as it was stored, which may be a string."""
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
 
 
 @dataclass
@@ -31,6 +50,7 @@ class Chunk:
     page: int     # 1-based page / slide
     score: float  # distance; lower = closer
     kind: str | None = None  # "slide" or "page"; absent in older collections
+    pdf_page: int | None = None  # sheet index in the file; absent in older collections
 
     @property
     def effective_kind(self) -> str:
@@ -40,7 +60,7 @@ class Chunk:
 
     @property
     def citation(self) -> str:
-        return cite(self.source, self.page, self.kind)
+        return cite(self.source, self.page, self.kind, self.pdf_page)
 
 
 @lru_cache(maxsize=1)
@@ -101,7 +121,8 @@ def retrieve(question: str, k: int = 5, max_distance: float | None = None,
     hits = _store().similarity_search_with_score(question, k=fetch)
     chunks = [
         Chunk(text=doc.page_content, source=doc.metadata["source"], page=int(doc.metadata["page"]),
-              score=float(score), kind=doc.metadata.get("kind"))
+              score=float(score), kind=doc.metadata.get("kind"),
+              pdf_page=_as_int(doc.metadata.get("pdf_page")))
         for doc, score in hits
     ]
     if max_distance is not None:
@@ -125,7 +146,8 @@ def sample(n: int = 5) -> list[Chunk]:
     return [
         Chunk(text=data["documents"][i], source=data["metadatas"][i]["source"],
               page=int(data["metadatas"][i]["page"]), score=0.0,
-              kind=data["metadatas"][i].get("kind"))
+              kind=data["metadatas"][i].get("kind"),
+              pdf_page=_as_int(data["metadatas"][i].get("pdf_page")))
         for i in idx
     ]
 

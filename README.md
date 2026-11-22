@@ -24,7 +24,7 @@ The system is built from two agents:
 
 | Agent | Responsibility |
 |---|---|
-| **Q&A Tutor** | Understands a course question, retrieves the relevant passages from the local vector database, answers from those passages only, and attaches a citation (file plus page or slide number) to each claim. Adds web references when the local match is weak. |
+| **Q&A Tutor** | Understands a course question, retrieves the relevant passages from the local vector database, answers from those passages only, and attaches a citation (file plus page or slide number, with the PDF sheet number alongside for textbooks) to each claim. Adds web references when the local match is weak. |
 | **Quiz** | Generates random or topic-specific quizzes in three formats (multiple choice, true/false, open-ended), grades the user's answer against a reference answer drawn from the source passage, and returns cited feedback with a numeric score. |
 
 ---
@@ -151,15 +151,24 @@ verbatim; the repository is public. Place your own copies in `data/raw/slides/` 
 *Chunk record in ChromaDB* — one per 220-word window:
 
 ```
-id        "<rel_path>#<chunk_index>"
+id        "<rel_path>::p<pdf_page>::c<chunk>"
 document  the chunk text
-metadata  { source: "slides/Lecture 03.pdf",
-            page: 12,
+metadata  { source: "Stallings NSE.pdf",
+            rel_path: "textbooks/Stallings NSE.pdf",
+            page: 117,
+            pdf_page: 135,
             kind: "slide" | "page",
-            rel_path: "slides/Lecture 03.pdf",
-            chunk_index: 7 }
+            chunk: 7 }
 embedding 768-dim vector from nomic-embed-text
 ```
+
+**Printed page versus file position.** `page` is the number printed on the paper and
+`pdf_page` is the position of that sheet in the file, counted from the cover. They differ
+in a textbook because the front matter carries no printed number: the offset is 18 for
+Stallings and 28 for Kurose, and `_detect_offset` in `src/cipher/loaders.py` recovers it
+from the running headers rather than hard-coding it. A citation gives both, because a
+reader who types the printed number into a PDF viewer lands short by exactly that offset.
+Slides number sheets and slides alike, so their citations show one number.
 
 *Integrity manifest* (`data/manifest.json`, committed):
 
@@ -184,7 +193,7 @@ qtype      "mcq" | "tf" | "open"
 stem       question text
 options    list of choices (mcq only)
 passage    the source passage the question was generated from
-citation   "Stallings NSE.pdf, p. 214"
+citation   "Stallings NSE, page 214 (PDF 232)"
 answer     reference answer — backend only, stripped by Question.for_student()
 ```
 

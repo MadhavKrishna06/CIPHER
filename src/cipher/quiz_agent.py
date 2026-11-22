@@ -220,10 +220,11 @@ class Question:
     passage: str               # the chunk the question came from, for feedback
     options: dict[str, str] | None = None   # mcq only, keys "A".."D"
     kind: str | None = None    # "slide" or "page"
+    pdf_page: int | None = None   # sheet index in the file, for textbook citations
 
     @property
     def citation(self) -> str:
-        return cite(self.source, self.page, self.kind)
+        return cite(self.source, self.page, self.kind, self.pdf_page)
 
     def for_student(self) -> dict:
         """The question without the answer key. This is the only shape an API returns."""
@@ -315,7 +316,7 @@ def _build(qtype: str, data: dict, chunk: Chunk) -> Question | None:
             return None
         return Question(qtype, text, answer, explanation, chunk.source, chunk.page,
                         chunk.text, {k: str(v).strip() for k, v in options.items()},
-                        chunk.kind)
+                        chunk.kind, chunk.pdf_page)
 
     if qtype == "tf":
         answer = data.get("answer")
@@ -323,14 +324,15 @@ def _build(qtype: str, data: dict, chunk: Chunk) -> Question | None:
         if not text or not isinstance(answer, bool):
             return None
         return Question(qtype, text, "true" if answer else "false", explanation,
-                        chunk.source, chunk.page, chunk.text, None, chunk.kind)
+                        chunk.source, chunk.page, chunk.text, None, chunk.kind,
+                        chunk.pdf_page)
 
     text = str(data.get("question", "")).strip()
     answer = str(data.get("answer", "")).strip()
     if not text or not answer:
         return None
     return Question(qtype, text, answer, explanation, chunk.source, chunk.page,
-                    chunk.text, None, chunk.kind)
+                    chunk.text, None, chunk.kind, chunk.pdf_page)
 
 
 def _answer_from_passage(passage: str, task: str, schema: dict):

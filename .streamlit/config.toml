@@ -12,3 +12,13 @@ headless = true
 
 [browser]
 gatherUsageStats = false
+
+# Hide the Deploy button and the developer menu.
+#
+# Streamlit shows a Deploy button that starts a Streamlit Community Cloud
+# deployment. Hosting this app on a third party would send the course corpus
+# off the machine, which is the one thing the design exists to prevent, and it
+# could not work anyway: Ollama is on loopback and data/chroma is gitignored.
+# "minimal" keeps the viewer options and drops Deploy and the develop options.
+[client]
+toolbarMode = "minimal"

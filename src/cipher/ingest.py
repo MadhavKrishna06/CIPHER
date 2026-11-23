@@ -2,10 +2,12 @@
 
 Pipeline per file:
   1. SHA-256 hash, compare against data/manifest.json (integrity check)
-  2. load pages/slides
-  3. split into ~500-word chunks with overlap
-  4. embed with the local Ollama embedding model
-  5. upsert into Chroma with {source, page, chunk} metadata for citations
+  2. load pages/slides, strip running headers, recover printed page numbers
+  3. drop pages that are not teachable prose (contents, index, bibliography)
+  4. split into CHUNK_WORDS-word chunks with CHUNK_OVERLAP_WORDS overlap (220 / 40)
+  5. embed with the local Ollama embedding model, EMBED_BATCH texts per request
+  6. upsert into Chroma with {source, rel_path, page, pdf_page, kind, chunk}
+     metadata for citations
 
 Nothing here touches the network except localhost:11434 (Ollama).
 

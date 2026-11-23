@@ -55,6 +55,81 @@
       "ingested_at": "2026-10-16T02:04:24+00:00",
       "sha256": "193d3bad9d986c57deac4f9fdc424ea8685284669477abe81c605e68b9a960f1"
     },
+    "slides/Lecture 12.pdf": {
+      "bytes": 535541,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "ed313c8fac70cca2e485c90eda905c5d2365adcefe4dbe766ff3922e6f927ff1"
+    },
+    "slides/Lecture 13.pdf": {
+      "bytes": 909348,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "08cd58d907094937e9269c4a9de8d458fafc6f1cec73663bec297a2dcbeeed65"
+    },
+    "slides/Lecture 14.pdf": {
+      "bytes": 697917,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "ae45faf1a42b09dc9f5d65d3fb4b3cab5fc608495c5f09e44b95ded32d0a1ec7"
+    },
+    "slides/Lecture 15.pdf": {
+      "bytes": 479377,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "bc90a8425133aa24e8f3af70d1887a3f489fe411d64e08e8529b11e5dbe468b4"
+    },
+    "slides/Lecture 16.pdf": {
+      "bytes": 655178,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "cc0859be8b4f54db70d8da59e5aef616905c1c7a25e727d3f4597583bd900cf1"
+    },
+    "slides/Lecture 17.pdf": {
+      "bytes": 488448,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "b0c03ec2f2fbbfc75073b88ceabdddffeeeb2d9e9a60e5f5943b2aa8f8c6cf43"
+    },
+    "slides/Lecture 18.pdf": {
+      "bytes": 624189,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "e3b9e866ed9b8b8aae3786cf805a81f051af741449185e545b3dd0a4e1cf4af5"
+    },
+    "slides/Lecture 19.pdf": {
+      "bytes": 587399,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "081c2ee4d09c353e770b462f0814384cc9846fd3b73cd4372b83a5d424403ccd"
+    },
+    "slides/Lecture 20.pdf": {
+      "bytes": 743993,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "aedcb06b9b091ee7fcfeb03c52cb4d7e911696bdd903bc732a7eb6fed702058d"
+    },
+    "slides/Lecture 21.pdf": {
+      "bytes": 581206,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "555687b9fef10be8e5ac3c36a0937d411932ba64180f80d90c94d3fb7db73bfa"
+    },
+    "slides/Lecture 22.pdf": {
+      "bytes": 744485,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "94c1e62be3b066646b52c82b13900b4576220aba2b9a1ebb8db6dcda8d415c4b"
+    },
+    "slides/Lecture 23.pdf": {
+      "bytes": 470203,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "c768efd229ab8f53fae606a0be911df45531f4c66616a8a73b1b96fcacfa3c58"
+    },
+    "slides/Lecture 24.pdf": {
+      "bytes": 538617,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "e4f0169ce4383ddb320dfd9d7f8f3338537607b445b9a690a04565536951289d"
+    },
+    "slides/Lecture 25.pdf": {
+      "bytes": 648190,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "3af8d5dfe979aedd233f138c5cc3e5f05d54ccd64827ae13f133e196c0e7099e"
+    },
+    "slides/Lecture 26.pdf": {
+      "bytes": 797380,
+      "ingested_at": "2026-11-23T00:26:01+00:00",
+      "sha256": "ed2ee447ceb28d7123097b73a82825740a3eff310172051621db941f1d897104"
+    },
     "textbooks/Kurose Computer Networking.pdf": {
       "bytes": 21508170,
       "ingested_at": "2026-10-16T02:04:24+00:00",
@@ -66,5 +141,5 @@
       "sha256": "767554b8bf069baf4c454d0628818ff96ce0e77a86cd782aa2a808e973b7c6b6"
     }
   },
-  "updated_at": "2026-10-16T02:04:24+00:00"
+  "updated_at": "2026-11-23T00:26:01+00:00"
 }

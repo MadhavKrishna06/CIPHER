@@ -25,3 +25,6 @@ security/captures/*.pcapng
 Thumbs.db
 .vscode/
 .idea/
+
+# Round 3 demo answers -- repo is public, this must not ship
+docs/round3_prep.md

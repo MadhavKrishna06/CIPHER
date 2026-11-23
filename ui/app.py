@@ -129,6 +129,11 @@ with tutor_tab:
                     st.markdown("**Web references**")
                     for w in a["web_sources"]:
                         st.caption(f"[{w['title']}]({w['url']})")
+                        if w.get("snippet"):
+                            st.caption(w["snippet"])
+                    engines = sorted({w.get("engine", "") for w in a["web_sources"] if w.get("engine")})
+                    if engines:
+                        st.caption(f"Looked up via {', '.join(engines)}; only the question text was sent.")
 
             if show_trace and a.get("trace"):
                 with st.expander("Retrieval trace: prompt to model input"):
@@ -231,6 +236,8 @@ with quiz_tab:
                     st.caption("Further reading:")
                     for w in r["web_sources"]:
                         st.caption(f"[{w['title']}]({w['url']})")
+                        if w.get("snippet"):
+                            st.caption(w["snippet"])
                 if show_trace:
                     with st.expander("Passage this question came from"):
                         st.write(r["passage"])

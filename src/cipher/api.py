@@ -142,7 +142,8 @@ def ask_endpoint(req: AskRequest) -> dict:
         "best_distance": a.best_distance,
         "blocked_by": a.blocked_by,
         "sources": [_chunk_dict(c) for c in a.sources],
-        "web_sources": [{"title": w.title, "url": w.url, "snippet": w.snippet} for w in a.web_sources],
+        "web_sources": [{"title": w.title, "url": w.url, "snippet": w.snippet,
+                         "engine": w.engine} for w in a.web_sources],
         # Trace for the Round 2 capture write-up: what was retrieved for this prompt
         # and the exact text handed to the local model.
         "trace": {
@@ -207,6 +208,6 @@ def quiz_grade(req: GradeRequest) -> dict:
         "similarity": result.similarity,
         "judge_verdict": result.judge_verdict,
         "passage": question.passage,
-        "web_sources": [{"title": w.title, "url": w.url, "snippet": w.snippet}
-                        for w in result.web_sources],
+        "web_sources": [{"title": w.title, "url": w.url, "snippet": w.snippet,
+                         "engine": w.engine} for w in result.web_sources],
     }
